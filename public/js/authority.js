@@ -1,97 +1,78 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const yearSpan = document.getElementById('year');
-  if (yearSpan) yearSpan.textContent = new Date().getFullYear();
+// Year auto update
+document.getElementById("year").textContent = new Date().getFullYear();
 
-  const tabs = document.querySelectorAll('.auth-tab');
-  const panels = document.querySelectorAll('.auth-panel');
-  const messageEl = document.getElementById('auth-message');
+// Tab switching
+const tabs = document.querySelectorAll(".auth-tab");
+const panels = document.querySelectorAll(".auth-panel");
+const messageBox = document.getElementById("auth-message");
 
-  tabs.forEach((tab) => {
-    tab.addEventListener('click', () => {
-      const target = tab.dataset.tab;
-      tabs.forEach((t) => t.classList.toggle('active', t === tab));
-      panels.forEach((p) =>
-        p.classList.toggle('active', p.id === `auth-${target}`)
-      );
-      if (messageEl) {
-        messageEl.textContent = '';
-        messageEl.className = 'form-message';
-      }
-    });
+tabs.forEach(tab => {
+  tab.addEventListener("click", () => {
+    tabs.forEach(t => t.classList.remove("active"));
+    panels.forEach(p => p.classList.remove("active"));
+
+    tab.classList.add("active");
+    document.getElementById("auth-" + tab.dataset.tab).classList.add("active");
+
+    clearMessage();
   });
-
-  function setMessage(text, type) {
-    if (!messageEl) return;
-    messageEl.textContent = text;
-    messageEl.className = `form-message ${type}`;
-  }
-
-  const loginForm = document.getElementById('login-form');
-  const signupForm = document.getElementById('signup-form');
-
-  if (signupForm) {
-    signupForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const formData = new FormData(signupForm);
-      const body = {
-        name: formData.get('name'),
-        email: formData.get('email'),
-        password: formData.get('password'),
-      };
-      try {
-        const res = await fetch('/api/auth/signup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          setMessage(data.message || 'Error creating account.', 'error');
-          return;
-        }
-        localStorage.setItem('gj_token', data.token);
-        localStorage.setItem('gj_authority_name', data.authority.name);
-        setMessage('Account created. Redirecting to dashboard…', 'success');
-        setTimeout(() => {
-          window.location.href = 'dashboard.html';
-        }, 600);
-      } catch (err) {
-        console.error(err);
-        setMessage('Unable to sign up right now.', 'error');
-      }
-    });
-  }
-
-  if (loginForm) {
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const formData = new FormData(loginForm);
-      const body = {
-        email: formData.get('email'),
-        password: formData.get('password'),
-      };
-      try {
-        const res = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          setMessage(data.message || 'Invalid credentials.', 'error');
-          return;
-        }
-        localStorage.setItem('gj_token', data.token);
-        localStorage.setItem('gj_authority_name', data.authority.name);
-        setMessage('Login successful. Redirecting to dashboard…', 'success');
-        setTimeout(() => {
-          window.location.href = 'dashboard.html';
-        }, 600);
-      } catch (err) {
-        console.error(err);
-        setMessage('Unable to login right now.', 'error');
-      }
-    });
-  }
 });
 
+function clearMessage() {
+  messageBox.textContent = "";
+  messageBox.className = "form-message";
+}
+
+function showMessage(msg, type) {
+  messageBox.textContent = msg;
+  messageBox.className = "form-message " + type; // success or error
+}
+
+/* =========================
+   SIGN UP (Local Storage)
+========================= */
+document.getElementById("signup-form").addEventListener("submit", function (e) {
+  e.preventDefault();
+
+  const name = document.getElementById("signup-name").value.trim();
+  const email = document.getElementById("signup-email").value.trim();
+  const password = document.getElementById("signup-password").value.trim();
+
+  let users = JSON.parse(localStorage.getItem("authorities")) || [];
+
+  // Check if email already exists
+  if (users.find(user => user.email === email)) {
+    showMessage("Email already registered!", "error");
+    return;
+  }
+
+  users.push({ name, email, password });
+  localStorage.setItem("authorities", JSON.stringify(users));
+
+  showMessage("Account created successfully! You can now login.", "success");
+  document.getElementById("signup-form").reset();
+});
+
+
+/* =========================
+   LOGIN (Local Storage)
+========================= */
+document.getElementById("login-form").addEventListener("submit", function (e) {
+  e.preventDefault();
+
+  const email = document.getElementById("login-email").value.trim();
+  const password = document.getElementById("login-password").value.trim();
+
+  let users = JSON.parse(localStorage.getItem("authorities")) || [];
+
+  const user = users.find(
+    user => user.email === email && user.password === password
+  );
+
+  if (user) {
+    localStorage.setItem("loggedInUser", JSON.stringify(user));
+    window.location.href = "dashboard.html";
+  } else {
+    showMessage("Invalid email or password!", "error");
+  }
+});
